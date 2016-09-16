@@ -8,13 +8,41 @@
 			"Rev": "0754dfcca172cfc4c07a61c123b23e5127d26760"
 		},
 		{
+			"ImportPath": "github.com/OpenBazaar/go-onion-transport",
+			"Rev": "4795fc579cb007a9b54c4f2aba25bf307b2e2ba6"
+		},
+		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "38f0acba638122902675969ee238f18301dd7990"
+			"Rev": "438d32dfbdd2150e44e5b9a4f25d1bd81762acd0"
+		},
+		{
+			"ImportPath": "github.com/anacrolix/missinggo",
+			"Rev": "86f106025d38e0baf732bb3e6761ab16e87d96cb"
+		},
+		{
+			"ImportPath": "github.com/anacrolix/missinggo/inproc",
+			"Rev": "86f106025d38e0baf732bb3e6761ab16e87d96cb"
+		},
+		{
+			"ImportPath": "github.com/anacrolix/missinggo/pproffd",
+			"Rev": "86f106025d38e0baf732bb3e6761ab16e87d96cb"
+		},
+		{
+			"ImportPath": "github.com/anacrolix/sync",
+			"Rev": "812602587b72df6a2a4f6e30536adc75394a374b"
+		},
+		{
+			"ImportPath": "github.com/anacrolix/utp",
+			"Rev": "59dfcf2995f0a175d717fe0b5b7c526771a0ad83"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",
 			"Comment": "v1.2.0-21-gd974993",
 			"Rev": "d97499360d1ecebc492ea66c7447ea948f417620"
+		},
+		{
+			"ImportPath": "github.com/bradfitz/iter",
+			"Rev": "454541ec3da2a73fc34fd049b19ee5777bf19345"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/blockchain",
@@ -193,6 +221,10 @@
 		{
 			"ImportPath": "github.com/gorilla/websocket",
 			"Rev": "e2e3d8414d0fbae04004f151979f4e27c6747fe7"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs-util",
+			"Rev": "b87e38d7a44d24a0d2d1ee53c4ae2348e831fd41"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/Godeps/_workspace/src/bazil.org/fuse",
@@ -695,7 +727,32 @@
 			"Rev": "ef20800e3382134189c204886b2b0c3c65a9120c"
 		},
 		{
+			"ImportPath": "github.com/ipfs/go-libp2p-crypto",
+			"Rev": "b8bc781da596c0346dfb7464e3fb1f6b4c666848"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-libp2p-crypto/pb",
+			"Rev": "b8bc781da596c0346dfb7464e3fb1f6b4c666848"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-libp2p-loggables",
+			"Rev": "8b94f8bcf53070d2722d5fe74767ff9ebce7804f"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-libp2p-peer",
+			"Rev": "d8874158d9e2e9c297a29d3499bcdcad91404232"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-libp2p-transport",
+			"Rev": "06e4f10af5d32585600a34d05e7b32eeeeabc845"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-log",
+			"Rev": "7c24d3c8b0889a7091d7f3618b9ad32b575db2c6"
+		},
+		{
 			"ImportPath": "github.com/jbenet/go-base58",
+			"Comment": "1.0.0",
 			"Rev": "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
 		},
 		{
@@ -703,9 +760,30 @@
 			"Rev": "d14ea06fba99483203c19d92cfcd13ebe73135f4"
 		},
 		{
+			"ImportPath": "github.com/jbenet/go-multiaddr",
+			"Comment": "0.1.2-59-g1dd0034",
+			"Rev": "1dd0034f7fe862dd8dc86a02602ff6f9e546f5fe"
+		},
+		{
+			"ImportPath": "github.com/jbenet/go-multiaddr-net",
+			"Rev": "825144c9a253d8f75fcaced0ac16181d8b384b22"
+		},
+		{
 			"ImportPath": "github.com/jbenet/go-multihash",
-			"Comment": "0.1.0-39-ge8d2374",
-			"Rev": "e8d2374934f16a971d1e94a864514a21ac74bf7f"
+			"Comment": "0.1.0-43-g5bb8e87",
+			"Rev": "5bb8e87657d874eea0af6366dc6336c4d819e7c1"
+		},
+		{
+			"ImportPath": "github.com/jbenet/go-reuseport",
+			"Rev": "71193aa1a9b006b1071652f02f2f9d8db699a8b3"
+		},
+		{
+			"ImportPath": "github.com/jbenet/go-reuseport/poll",
+			"Rev": "71193aa1a9b006b1071652f02f2f9d8db699a8b3"
+		},
+		{
+			"ImportPath": "github.com/jbenet/go-sockaddr/net",
+			"Rev": "2e7ea655c10e4d4d73365f0f073b81b39cb08ee1"
 		},
 		{
 			"ImportPath": "github.com/jessevdk/go-flags",
@@ -749,31 +827,56 @@
 			"Rev": "970db520ece77730c7e4724c61121037378659d9"
 		},
 		{
+			"ImportPath": "github.com/satori/go.uuid",
+			"Comment": "v1.0.0",
+			"Rev": "f9ab0dce87d815821e221626b772e3475a0d2749"
+		},
+		{
 			"ImportPath": "github.com/tyler-smith/go-bip39",
 			"Rev": "32e294b638a7246c6f0c85736d627a2562604f80"
 		},
 		{
+			"ImportPath": "github.com/whyrusleeping/go-logging",
+			"Rev": "128b9855511a4ea3ccbcf712695baf2bab72e134"
+		},
+		{
+			"ImportPath": "github.com/whyrusleeping/mafmt",
+			"Rev": "484294860854e67322cee93290298443819893df"
+		},
+		{
+			"ImportPath": "github.com/yawning/bulb",
+			"Rev": "2d65b370c8d197791de1288e4d2778a2a3cc5abc"
+		},
+		{
+			"ImportPath": "github.com/yawning/bulb/utils/pkcs1",
+			"Rev": "2d65b370c8d197791de1288e4d2778a2a3cc5abc"
+		},
+		{
 			"ImportPath": "golang.org/x/crypto/hkdf",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "81372b2fc2f10bef2a7f338da115c315a56b2726"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/pbkdf2",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "81372b2fc2f10bef2a7f338da115c315a56b2726"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/scrypt",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "81372b2fc2f10bef2a7f338da115c315a56b2726"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/sha3",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "81372b2fc2f10bef2a7f338da115c315a56b2726"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ssh/terminal",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+			"Rev": "81372b2fc2f10bef2a7f338da115c315a56b2726"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
+			"Rev": "35ec611a141ee705590b9eb64d673f9e6dfeb1ac"
+		},
+		{
+			"ImportPath": "golang.org/x/net/proxy",
 			"Rev": "35ec611a141ee705590b9eb64d673f9e6dfeb1ac"
 		},
 		{

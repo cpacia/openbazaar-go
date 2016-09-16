@@ -276,6 +276,18 @@ func addressBytesToString(p Protocol, b []byte) (string, error) {
 			return "", err
 		}
 		return m.B58String(), nil
+	case P_ONION:
+		onionHostBytes := b[:10]
+		onionPortBytes := b[10:]
+		port := binary.BigEndian.Uint16(onionPortBytes)
+		if port > 65535 {
+			return "", fmt.Errorf("failed to parse %s addr: %s", p.Name, "port greater than 65535")
+		}
+		if port < 1 {
+			return "", fmt.Errorf("failed to parse %s addr: %s", p.Name, "port less than 1")
+		}
+		return strings.ToLower(base32.StdEncoding.EncodeToString(onionHostBytes)) + ":" + strconv.Itoa(int(port)), nil
+
 	default:
 		return "", fmt.Errorf("unknown protocol")
 	}

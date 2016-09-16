@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"crypto/rand"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
+	"github.com/OpenBazaar/go-onion-transport"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
 	lis "github.com/OpenBazaar/openbazaar-go/bitcoin/listeners"
@@ -52,6 +53,13 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
+	pstore "gx/ipfs/QmQdnfvZQuhdT93LNc5bos52wAmdr3G2p6G8teLJMEN32P/go-libp2p-peerstore"
+	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	p2phost "gx/ipfs/QmVCe3SNMjkcPgnpFhZs719dheq6xE7gJwjzV7aWcUM4Ms/go-libp2p/p2p/host"
+	p2pbhost "gx/ipfs/QmVCe3SNMjkcPgnpFhZs719dheq6xE7gJwjzV7aWcUM4Ms/go-libp2p/p2p/host/basic"
+	metrics "gx/ipfs/QmVCe3SNMjkcPgnpFhZs719dheq6xE7gJwjzV7aWcUM4Ms/go-libp2p/p2p/metrics"
+	"gx/ipfs/QmVCe3SNMjkcPgnpFhZs719dheq6xE7gJwjzV7aWcUM4Ms/go-libp2p/p2p/net/swarm"
+	p2paddr "gx/ipfs/QmVCe3SNMjkcPgnpFhZs719dheq6xE7gJwjzV7aWcUM4Ms/go-libp2p/p2p/net/swarm/addr"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -220,6 +228,8 @@ func (x *Start) Execute(args []string) error {
 	repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
 	os.Remove(repoLockFile)
 
+	obnet.MaybeCreateHiddenServiceKey(repoPath)
+
 	sqliteDB, err := initializeRepo(repoPath, x.Password, "", isTestnet)
 	if err != nil && err != repo.ErrRepoExists {
 		return err
@@ -308,6 +318,7 @@ func (x *Start) Execute(args []string) error {
 	cfg.Identity = identity
 
 	// Iterate over our address and process them as needed
+	var onionTransport *torOnion.OnionTransport
 	for i, addr := range cfg.Addresses.Swarm {
 		m, _ := ma.NewMultiaddr(addr)
 		p := m.Protocols()
@@ -316,17 +327,59 @@ func (x *Start) Execute(args []string) error {
 			port, serr := obnet.Stun()
 			if serr != nil {
 				log.Error(serr)
-				return err
+				return serr
 			}
 			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm[:i], cfg.Addresses.Swarm[i+1:]...)
 			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
 			break
+		} else if p[0].Name == "onion" {
+			controlPort, err := obnet.GetTorControlPort()
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			torControl := "127.0.0.1:" + strconv.Itoa(controlPort)
+			onionTransport, err = torOnion.NewOnionTransport("tcp4", torControl, nil, repoPath)
+			p2paddr.SupportedTransportStrings = append(p2paddr.SupportedTransportStrings, "/onion")
+			t, err := ma.ProtocolsWithString("/onion")
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			p2paddr.SupportedTransportProtocols = append(p2paddr.SupportedTransportProtocols, t)
+
+			if err != nil {
+				log.Error(err)
+				return err
+			}
 		}
+	}
+
+	// Ipfs host option. We override the default here so we can add the onion transport.
+	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet) (p2phost.Host, error) {
+		// no addresses to begin with. we'll start later.
+		network, err := swarm.NewNetwork(ctx, nil, id, ps, bwr)
+		if err != nil {
+			return nil, err
+		}
+
+		if onionTransport != nil {
+			network.Swarm().AddTransport(onionTransport)
+		}
+
+		for _, f := range fs {
+			network.Swarm().Filters.AddDialFilter(f)
+		}
+
+		host := p2pbhost.New(network, p2pbhost.NATPortMap, bwr)
+
+		return host, nil
 	}
 
 	ncfg := &ipfscore.BuildCfg{
 		Repo:   r,
 		Online: true,
+		Host:   defaultHostOption,
 	}
 	nd, err := ipfscore.NewNode(cctx, ncfg)
 	if err != nil {

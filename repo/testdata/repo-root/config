@@ -1,0 +1,88 @@
+{
+  "API": {
+    "HTTPHeaders": null
+  },
+  "Addresses": {
+    "API": "",
+    "Gateway": "/ip4/127.0.0.1/tcp/8080",
+    "Swarm": [
+      "/ip4/0.0.0.0/tcp/4001",
+      "/ip6/::/tcp/4001"
+    ]
+  },
+  "Bootstrap": [
+    "/ip4/107.170.133.32/tcp/4001/ipfs/QmSwHSqtUi9GhHTegi8gA5n2fsjP7LcnxGQeedj8ScLi8q",
+    "/ip4/139.59.174.197/tcp/4001/ipfs/Qmf6ZASu56X3iS9zBh5CQRDCLHttDY41637qn87gzSGybs",
+    "/ip4/139.59.6.222/tcp/4001/ipfs/QmZAZYJ5MvqkdoTuaFaoeyHkHLd8muENfr9JTo7ikQZPSG"
+  ],
+  "Crosspost-gateways": [
+    "http://gateway.ob1.io/"
+  ],
+  "Datastore": {
+    "BloomFilterSize": 0,
+    "GCPeriod": "1h",
+    "HashOnRead": false,
+    "NoSync": false,
+    "Params": null,
+    "Path": "testdata/repo-root/datastore",
+    "StorageGCWatermark": 90,
+    "StorageMax": "10GB",
+    "Type": "leveldb"
+  },
+  "Discovery": {
+    "MDNS": {
+      "Enabled": false,
+      "Interval": 10
+    }
+  },
+  "Dropbox-api-token": "",
+  "Gateway": {
+    "HTTPHeaders": null,
+    "PathPrefixes": [],
+    "RootRedirect": "",
+    "Writable": false
+  },
+  "Identity": {
+    "PeerID": "QmQtr8sPhfFgE5vcq7gmxvVo1HygeCUXrXfzfmKdgNa1wG",
+    "PrivKey": "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"
+  },
+  "Ipns": {
+    "RecordLifetime": "7d",
+    "RepublishPeriod": "24h",
+    "ResolveCacheSize": 128
+  },
+  "JSON-API": {
+    "Authenticated": false,
+    "CORS": false,
+    "Enabled": true,
+    "HTTPHeaders": null,
+    "Password": "",
+    "SSL": false,
+    "SSLCert": "",
+    "SSLKey": "",
+    "Username": ""
+  },
+  "Mounts": {
+    "FuseAllowOther": false,
+    "IPFS": "/ipfs",
+    "IPNS": "/ipns"
+  },
+  "Resolver": "https://resolver.onename.com/",
+  "SupernodeRouting": {
+    "Servers": null
+  },
+  "Swarm": {
+    "AddrFilters": null
+  },
+  "Tour": {
+    "Last": ""
+  },
+  "Wallet": {
+    "FeeAPI": "https://bitcoinfees.21.co/api/v1/fees/recommended",
+    "HighFeeDefault": 60,
+    "LowFeeDefault": 20,
+    "MaxFee": 2000,
+    "MediumFeeDefault": 40,
+    "TrustedPeer": ""
+  }
+}
