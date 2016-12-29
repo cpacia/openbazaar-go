@@ -22,22 +22,22 @@ class ReceiveCoinsTest(OpenBazaarTestFramework):
             raise TestFailure("ReceiveCoinsTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("ReceiveCoinsTest - FAIL: Unknown response")
-        r = self.send_bitcoin_cmd("generatetoaddress", 1, address)
-        time.sleep(1)
+        self.send_bitcoin_cmd("sendtoaddress", address, 10)
+        time.sleep(20)
         api_url = self.nodes[0]["gateway_url"] + "wallet/balance"
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
             unconfirmed = int(resp["unconfirmed"])
-            if confirmed + unconfirmed > 0:
-                print("ReceiveCoinsTest - PASS")
-            else:
+            if confirmed + unconfirmed <= 0:
                 raise TestFailure("ReceiveCoinsTest - FAIL: Wallet is empty")
         elif r.status_code == 404:
-            raise TestFailure("ReceiveCoinsTest - FAIL: Listing post endpoint not found")
+            raise TestFailure("ReceiveCoinsTest - FAIL: Receive coins endpoint not found")
         else:
             raise TestFailure("ReceiveCoinsTest - FAIL: Unknown response")
+
+        print("ReceiveCoinsTest - PASS")
 
 if __name__ == '__main__':
     print("Running ReceiveCoinsTest")

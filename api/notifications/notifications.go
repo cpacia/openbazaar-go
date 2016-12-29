@@ -2,10 +2,15 @@ package notifications
 
 import (
 	"encoding/json"
+	"time"
 )
 
 type notificationWrapper struct {
 	Notfication interface{} `json:"notification"`
+}
+
+type messageWrapper struct {
+	Message interface{} `json:"message"`
 }
 
 type orderWrapper struct {
@@ -34,6 +39,18 @@ type fulfillmentWrapper struct {
 
 type completionWrapper struct {
 	CompletionNotification `json:"orderCompletion"`
+}
+
+type disputeOpenWrapper struct {
+	DisputeOpenNotification `json:"disputeOpen"`
+}
+
+type disputeUpdateWrapper struct {
+	DisputeUpdateNotification `json:"disputeUpdate"`
+}
+
+type disputeCloseWrapper struct {
+	DisputeCloseNotification `json:"disputeClose"`
 }
 
 type OrderNotification struct {
@@ -70,12 +87,31 @@ type CompletionNotification struct {
 	OrderId string `json:"orderId"`
 }
 
+type DisputeOpenNotification struct {
+	OrderId string `json:"orderId"`
+}
+
+type DisputeUpdateNotification struct {
+	OrderId string `json:"orderId"`
+}
+
+type DisputeCloseNotification struct {
+	OrderId string `json:"orderId"`
+}
+
 type FollowNotification struct {
 	Follow string `json:"follow"`
 }
 
 type UnfollowNotification struct {
 	Unfollow string `json:"unfollow"`
+}
+
+type ChatMessage struct {
+	PeerId    string    `json:"peerId"`
+	Subject   string    `json:"subject"`
+	Message   string    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 func Serialize(i interface{}) []byte {
@@ -123,6 +159,24 @@ func Serialize(i interface{}) []byte {
 				CompletionNotification: i.(CompletionNotification),
 			},
 		}
+	case DisputeOpenNotification:
+		n = notificationWrapper{
+			disputeOpenWrapper{
+				DisputeOpenNotification: i.(DisputeOpenNotification),
+			},
+		}
+	case DisputeUpdateNotification:
+		n = notificationWrapper{
+			disputeUpdateWrapper{
+				DisputeUpdateNotification: i.(DisputeUpdateNotification),
+			},
+		}
+	case DisputeCloseNotification:
+		n = notificationWrapper{
+			disputeCloseWrapper{
+				DisputeCloseNotification: i.(DisputeCloseNotification),
+			},
+		}
 	case FollowNotification:
 		n = notificationWrapper{
 			i.(FollowNotification),
@@ -131,6 +185,12 @@ func Serialize(i interface{}) []byte {
 		n = notificationWrapper{
 			i.(UnfollowNotification),
 		}
+	case ChatMessage:
+		m := messageWrapper{
+			i.(ChatMessage),
+		}
+		b, _ := json.MarshalIndent(m, "", "    ")
+		return b
 	}
 	b, _ := json.MarshalIndent(n, "", "    ")
 	return b

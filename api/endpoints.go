@@ -58,6 +58,16 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTRefund(w, r)
 	case "/wallet/resyncblockchain", "/wallet/resyncblockchain/":
 		i.POSTResyncBlockchain(w, r)
+	case "/ob/opendispute", "/ob/opendispute/":
+		i.POSTOpenDispute(w, r)
+	case "/ob/closedispute", "/ob/closedispute/":
+		i.POSTCloseDispute(w, r)
+	case "/ob/releasefunds", "/ob/releasefunds/":
+		i.POSTReleaseFunds(w, r)
+	case "/ob/chat", "/ob/chat/":
+		i.POSTChat(w, r)
+	case "/ob/markchatasread", "/ob/markchatasread/":
+		i.POSTMarkChatAsRead(w, r)
 	case "/ob/shutdown", "/ob/shutdown/":
 		i.POSTShutdown(w, r)
 	default:
@@ -91,6 +101,8 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETFollowing(w, r)
 	case strings.Contains(path, "/ob/inventory"):
 		i.GETInventory(w, r)
+	case strings.Contains(path, "/ob/profile"):
+		i.GETProfile(w, r)
 	case strings.Contains(path, "/ob/listings"):
 		i.GETListings(w, r)
 	case strings.Contains(path, "/ob/listing"):
@@ -103,6 +115,12 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETOrder(w, r)
 	case strings.Contains(path, "/ob/moderators"):
 		i.GETModerators(w, r)
+	case strings.Contains(path, "/ob/case"):
+		i.GETCase(w, r)
+	case strings.Contains(path, "/ob/chatmessages"):
+		i.GETChatMessages(w, r)
+	case strings.Contains(path, "/ob/chatconversations"):
+		i.GETChatConversations(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
@@ -123,6 +141,10 @@ func deleter(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Requ
 		i.DELETEModerator(w, r)
 	case "/ob/listing", "/ob/listing/":
 		i.DELETEListing(w, r)
+	case "/ob/chatmessage", "/ob/chatmessage/":
+		i.DELETEChatMessage(w, r)
+	case "/ob/chatconversation", "/ob/chatconversation/":
+		i.DELETEChatConversation(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}

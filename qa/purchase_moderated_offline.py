@@ -27,10 +27,8 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Unknown response")
-        self.send_bitcoin_cmd("generatetoaddress", 1, address)
-        time.sleep(2)
-        self.send_bitcoin_cmd("generate", 125)
-        time.sleep(3)
+        self.send_bitcoin_cmd("sendtoaddress", address, 10)
+        time.sleep(20)
 
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
@@ -129,7 +127,7 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
-        time.sleep(5)
+        time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -147,13 +145,13 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(10)
+        time.sleep(45)
 
         # check alice detected order and payment
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Couldn't load order from Alice %s", r.status_code)
         resp = json.loads(r.text)
         if resp["state"] != "PENDING":
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Alice failed to detect payment")

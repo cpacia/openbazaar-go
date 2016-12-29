@@ -26,10 +26,8 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("CancelDirectOfflineTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("CancelDirectOfflineTest - FAIL: Unknown response")
-        self.send_bitcoin_cmd("generatetoaddress", 1, address)
-        time.sleep(2)
-        self.send_bitcoin_cmd("generate", 125)
-        time.sleep(3)
+        self.send_bitcoin_cmd("sendtoaddress", address, 10)
+        time.sleep(20)
 
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
@@ -102,7 +100,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("CancelDirectOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
-        time.sleep(5)
+        time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -124,7 +122,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("CancelDirectOfflineTest - FAIL: Cancel POST failed. Reason: %s", resp["reason"])
-        time.sleep(10)
+        time.sleep(4)
 
         # bob check order canceled correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -139,13 +137,14 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(5)
+        time.sleep(45)
 
         # check alice detected order
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("CancelDirectOfflineTest - FAIL: Couldn't load order from Alice")
+            self.print_logs(alice, "ob.log")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Couldn't load order from Alice %s", r.status_code)
         resp = json.loads(r.text)
         if resp["state"] != "CANCELED":
             raise TestFailure("CancelDirectOfflineTest - FAIL: Alice failed to detect order cancellation")

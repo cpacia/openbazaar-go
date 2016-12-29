@@ -2,8 +2,11 @@ package service
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
+	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -11,9 +14,12 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	libp2p "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
+	"time"
 )
 
 func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
@@ -26,6 +32,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleUnFollow
 	case pb.Message_OFFLINE_ACK:
 		return service.handleOfflineAck
+	case pb.Message_OFFLINE_RELAY:
+		return service.handleOfflineRelay
 	case pb.Message_ORDER:
 		return service.handleOrder
 	case pb.Message_ORDER_CONFIRMATION:
@@ -40,6 +48,14 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleOrderFulfillment
 	case pb.Message_ORDER_COMPLETION:
 		return service.handleOrderCompletion
+	case pb.Message_DISPUTE_OPEN:
+		return service.handleDisputeOpen
+	case pb.Message_DISPUTE_UPDATE:
+		return service.handleDisputeUpdate
+	case pb.Message_DISPUTE_CLOSE:
+		return service.handleDisputeClose
+	case pb.Message_CHAT:
+		return service.handleChat
 	default:
 		return nil
 	}
@@ -83,6 +99,60 @@ func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message, 
 	return nil, nil
 }
 
+func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received OFFLINE_RELAY message from %s", p.Pretty())
+	// This acts very similarly to attemptDecrypt&handleMessage in the Offline Message Retreiver
+	// However it does not send an ACK, or worry about message ordering
+
+	// Decrypt and unmarshal plaintext
+	plaintext, err := net.Decrypt(service.node.IpfsNode.PrivateKey, pmes.Payload.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal plaintext
+	env := pb.Envelope{}
+	err = proto.Unmarshal(plaintext, &env)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate the signature
+	ser, err := proto.Marshal(env.Message)
+	if err != nil {
+		return nil, err
+	}
+	pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
+	if err != nil {
+		return nil, err
+	}
+	valid, err := pubkey.Verify(ser, env.Signature)
+	if err != nil || !valid {
+		return nil, err
+	}
+
+	id, err := peer.IDFromPublicKey(pubkey)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get handler for this message type
+	handler := service.HandlerForMsgType(env.Message.MessageType)
+	if handler == nil {
+		log.Debug("Got back nil handler from HandlerForMsgType")
+		return nil, nil
+	}
+
+	// Dispatch handler
+	_, err = handler(id, env.Message, true)
+	if err != nil {
+		log.Errorf("Handle message error: %s", err)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received ORDER message from %s", peer.Pretty())
 	offline, _ := options.(bool)
@@ -99,7 +169,6 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	if err != nil {
 		return errorResponse("Could not unmarshal order"), err
 	}
-	log.Notice(contract.VendorListings[0].Coupons[0].GetPercentDiscount())
 
 	err = service.node.ValidateOrder(contract)
 	if err != nil {
@@ -569,7 +638,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	}
 
 	// Load the order
-	contract, _, _, records, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
+	contract, state, _, records, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
 	if err != nil {
 		return nil, err
 	}
@@ -585,7 +654,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		return nil, err
 	}
 
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && state != pb.OrderState_RESOLVED {
 		var ins []spvwallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
@@ -646,5 +715,175 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	n := notifications.Serialize(notifications.CompletionNotification{rc.BuyerOrderCompletion.OrderId})
 	service.broadcast <- n
 
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received DISPUTE_OPEN message from %s", p.Pretty())
+
+	// Unmarshall
+	rc := new(pb.RicardianContract)
+	err := ptypes.UnmarshalAny(pmes.Payload, rc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify signature
+	err = service.node.VerifySignatureOnDisputeOpen(rc, p.Pretty())
+	if err != nil {
+		return nil, err
+	}
+
+	// Process message
+	err = service.node.ProcessDisputeOpen(rc, p.Pretty())
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received DISPUTE_UPDATE message from %s", p.Pretty())
+
+	// Make sure we aren't currently processing any disputes before proceeding
+	core.DisputeWg.Wait()
+
+	// Unmarshall
+	update := new(pb.DisputeUpdate)
+	err := ptypes.UnmarshalAny(pmes.Payload, update)
+	if err != nil {
+		return nil, err
+	}
+	buyerContract, vendorContract, _, _, _, _, _, err := service.node.Datastore.Cases().GetPayoutDetails(update.OrderId)
+	if err != nil {
+		return nil, err
+	}
+	rc := new(pb.RicardianContract)
+	err = proto.Unmarshal(update.SerializedContract, rc)
+	if err != nil {
+		return nil, err
+	}
+	if buyerContract == nil {
+		buyerValidationErrors := service.node.ValidateCaseContract(rc)
+		err = service.node.Datastore.Cases().UpdateBuyerInfo(update.OrderId, rc, buyerValidationErrors, update.PayoutAddress, update.Outpoints)
+		if err != nil {
+			return nil, err
+		}
+	} else if vendorContract == nil {
+		vendorValidationErrors := service.node.ValidateCaseContract(rc)
+		err = service.node.Datastore.Cases().UpdateVendorInfo(update.OrderId, rc, vendorValidationErrors, update.PayoutAddress, update.Outpoints)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, errors.New("All contracts have already been received")
+	}
+	// Send notification to websocket
+	n := notifications.Serialize(notifications.DisputeUpdateNotification{update.OrderId})
+	service.broadcast <- n
+
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received DISPUTE_CLOSE message from %s", p.Pretty())
+
+	// Unmarshall
+	rc := new(pb.RicardianContract)
+	err := ptypes.UnmarshalAny(pmes.Payload, rc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load the order
+	isPurchase := false
+	var contract *pb.RicardianContract
+	contract, _, _, _, _, err = service.datastore.Sales().GetByOrderId(rc.DisputeResolution.OrderId)
+	if err != nil {
+		contract, _, _, _, _, err = service.datastore.Purchases().GetByOrderId(rc.DisputeResolution.OrderId)
+		if err != nil {
+			return nil, err
+		}
+		isPurchase = true
+	}
+
+	// Validate
+	contract.DisputeResolution = rc.DisputeResolution
+	for _, sig := range rc.Signatures {
+		if sig.Section == pb.Signature_DISPUTE_RESOLUTION {
+			contract.Signatures = append(contract.Signatures, sig)
+		}
+	}
+	err = service.node.ValidateDisputeResolution(contract)
+	if err != nil {
+		return nil, err
+	}
+
+	// Save to database
+	contract.DisputeResolution = rc.DisputeResolution
+	for _, sig := range rc.Signatures {
+		if sig.Section == pb.Signature_DISPUTE_RESOLUTION {
+			contract.Signatures = append(contract.Signatures, sig)
+		}
+	}
+	if isPurchase {
+		// Set message state to complete
+		err = service.datastore.Purchases().Put(rc.DisputeResolution.OrderId, *contract, pb.OrderState_DECIDED, false)
+	} else {
+		err = service.datastore.Sales().Put(rc.DisputeResolution.OrderId, *contract, pb.OrderState_DECIDED, false)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Send notification to websocket
+	n := notifications.Serialize(notifications.DisputeCloseNotification{rc.DisputeResolution.OrderId})
+	service.broadcast <- n
+
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received CHAT message from %s", p.Pretty())
+
+	// Unmarshall
+	chat := new(pb.Chat)
+	err := ptypes.UnmarshalAny(pmes.Payload, chat)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate
+	if len(chat.Subject) > core.CHAT_SUBJECT_MAX_CHARACTERS {
+		return nil, errors.New("Chat subject over max characters")
+	}
+	if len(chat.Message) > core.CHAT_MESSAGE_MAX_CHARACTERS {
+		return nil, errors.New("Chat message over max characters")
+	}
+
+	// Use correct timestamp
+	offline, _ := options.(bool)
+	var t time.Time
+	if !offline {
+		t = time.Now()
+	} else {
+		t = time.Unix(chat.Timestamp.Seconds, int64(chat.Timestamp.Nanos))
+	}
+
+	// Put to database
+	err = service.datastore.Chat().Put(p.Pretty(), chat.Subject, chat.Message, t, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Push to websocket
+	n := notifications.Serialize(notifications.ChatMessage{
+		PeerId:    p.Pretty(),
+		Subject:   chat.Subject,
+		Message:   chat.Message,
+		Timestamp: t,
+	})
+	service.broadcast <- n
 	return nil, nil
 }

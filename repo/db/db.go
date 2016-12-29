@@ -20,7 +20,6 @@ type SQLiteDatastore struct {
 	offlineMessages repo.OfflineMessages
 	pointers        repo.Pointers
 	keys            spvwallet.Keys
-	state           spvwallet.State
 	stxos           spvwallet.Stxos
 	txns            spvwallet.Txns
 	utxos           spvwallet.Utxos
@@ -29,6 +28,8 @@ type SQLiteDatastore struct {
 	inventory       repo.Inventory
 	purchases       repo.Purchases
 	sales           repo.Sales
+	cases           repo.Cases
+	chat            repo.Chat
 	db              *sql.DB
 	lock            *sync.Mutex
 }
@@ -76,10 +77,6 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
-		state: &StateDB{
-			db:   conn,
-			lock: l,
-		},
 		stxos: &StxoDB{
 			db:   conn,
 			lock: l,
@@ -109,6 +106,14 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			lock: l,
 		},
 		watchedScripts: &WatchedScriptsDB{
+			db:   conn,
+			lock: l,
+		},
+		cases: &CasesDB{
+			db:   conn,
+			lock: l,
+		},
+		chat: &ChatDB{
 			db:   conn,
 			lock: l,
 		},
@@ -147,10 +152,6 @@ func (d *SQLiteDatastore) Keys() spvwallet.Keys {
 	return d.keys
 }
 
-func (d *SQLiteDatastore) State() spvwallet.State {
-	return d.state
-}
-
 func (d *SQLiteDatastore) Stxos() spvwallet.Stxos {
 	return d.stxos
 }
@@ -181,6 +182,14 @@ func (d *SQLiteDatastore) Sales() repo.Sales {
 
 func (d *SQLiteDatastore) WatchedScripts() spvwallet.WatchedScripts {
 	return d.watchedScripts
+}
+
+func (d *SQLiteDatastore) Cases() repo.Cases {
+	return d.cases
+}
+
+func (d *SQLiteDatastore) Chat() repo.Chat {
+	return d.chat
 }
 
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
@@ -237,11 +246,13 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, freeze int);
 	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, spendHeight integer, spendTxid text);
 	create table txns (txid text primary key not null, tx blob);
-	create table state (key text primary key not null, value text);
 	create table inventory (slug text primary key not null, count integer);
 	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
 	create table sales (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
-	create table if not exists watchedscripts (scriptPubKey text primary key not null);
+	create table watchedscripts (scriptPubKey text primary key not null);
+	create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, date integer, buyerOpened integer, claim text, disputeResolution blob);
+	create table chat (peerID text, subject text, message text, read integer, timestamp integer, outgoing integer);
+	create index index_chat ON chat(peerID, subject, read, timestamp);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {

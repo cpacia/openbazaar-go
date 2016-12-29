@@ -26,10 +26,8 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Unknown response")
-        self.send_bitcoin_cmd("generatetoaddress", 1, address)
-        time.sleep(2)
-        self.send_bitcoin_cmd("generate", 125)
-        time.sleep(3)
+        self.send_bitcoin_cmd("sendtoaddress", address, 10)
+        time.sleep(20)
 
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
@@ -105,7 +103,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(10)
+        time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -141,7 +139,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Fulfillment POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
+        time.sleep(5)
 
         # check bob received fulfillment
         api_url = bob["gateway_url"] + "ob/order/" + orderId

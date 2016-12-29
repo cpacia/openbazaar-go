@@ -139,6 +139,14 @@ func (w *BitcoindWallet) CurrentAddress(purpose spvwallet.KeyPurpose) btc.Addres
 	return addr
 }
 
+func (w *BitcoindWallet) HasKey(addr btc.Address) bool {
+	_, err := w.rpcClient.DumpPrivKey(addr)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
 	u, _ := w.rpcClient.GetUnconfirmedBalance(account)
 	c, _ := w.rpcClient.GetBalance(account)
@@ -180,9 +188,20 @@ func (w *BitcoindWallet) GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64 {
 	return uint64(fee)
 }
 
+func (w *BitcoindWallet) EstimateFee(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, feePerByte uint64) uint64 {
+	tx := wire.NewMsgTx(wire.TxVersion)
+	for _, out := range outs {
+		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		tx.TxOut = append(tx.TxOut, output)
+	}
+	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false)
+	fee := estimatedSize * int(feePerByte)
+	return uint64(fee)
+}
+
 func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]spvwallet.Signature, error) {
 	var sigs []spvwallet.Signature
-	tx := new(wire.MsgTx)
+	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
@@ -225,7 +244,7 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInpu
 }
 
 func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, sigs1 []spvwallet.Signature, sigs2 []spvwallet.Signature, redeemScript []byte, feePerByte uint64) error {
-	tx := new(wire.MsgTx)
+	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
